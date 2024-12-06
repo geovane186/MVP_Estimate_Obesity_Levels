@@ -43,16 +43,16 @@ url_dados = 'https://raw.githubusercontent.com/geovane186/MVP_Estimate_Obesity_L
 obesityDataSet = pd.read_csv(url_dados)
 
 # Verifica o tipo de obesityDataSet
-print(type(obesityDataSet))
+print('Classe do DataSet:',type(obesityDataSet), '\n')
 
 # Exibe as 5 primeiras linhas
-print(obesityDataSet.head())
+print(obesityDataSet.head(), '\n')
 
 # Verificando se existem valores ausentes
-print(obesityDataSet.isnull().sum())
+print('Check de valores ausentes:\n',obesityDataSet.isnull().sum())
 
 # Verificando os tipos das colunas
-print(obesityDataSet.dtypes)
+print('\n Tipos das colunas:\n',obesityDataSet.dtypes)
 
 # 3) Divisão inicial do dataset (Holdout e Validação Cruzada)
 
@@ -160,8 +160,8 @@ models = [
 
 # Definindo os pré-processadores
 scalers = [
-    ('StandardScaler', StandardScaler()),
-    ('MinMaxScaler', MinMaxScaler())
+    ('StandardScaler', StandardScaler()), # Padronizador
+    ('MinMaxScaler', MinMaxScaler()) # Normalizador
 ]
 
 # Técnicas de seleção de atributos
@@ -187,6 +187,7 @@ for model_name, model in models:
         pipelines.append((
             f'{model_name}-{selection_name}',
             Pipeline(steps=[('preprocessing', preprocessor),
+                            (selection_name, selection),
                             (model_name, model)])
         ))
 
@@ -236,13 +237,18 @@ np.random.seed(42) # definindo uma semente global para este bloco
 
 pipelines = []
 
+# Instanciando o padronizador
+standard_scaler = ('StandardScaler', StandardScaler())
+
+# Instanciando o SelectKBest
+best_var = SelectKBest(score_func=f_classif, k=10)
+
 # Instanciando o classificador
 gbc = GradientBoostingClassifier()
-
 gradient_boosting = ('GB', gbc)
 
-pipelines.append(('GB-orig-kbest', Pipeline(steps=[('preprocessing', preprocessor), ('select_kbest', best_var), gradient_boosting])))
-pipelines.append(('GB-padr-kbest', Pipeline(steps=[('preprocessing', preprocessor),standard_scaler, ('select_kbest', best_var), gradient_boosting])))
+pipelines.append(('GB-select_kbest', Pipeline(steps=[('preprocessing', preprocessor), ('select_kbest', best_var), gradient_boosting]))) # GB com DataSet original com Feature Selection
+pipelines.append(('GB-StandardScaler-select_kbest', Pipeline(steps=[('preprocessing', preprocessor),standard_scaler, ('select_kbest', best_var), gradient_boosting]))) # GB com DataSet padronizado com Feature Selection
 
 param_distributions = {
     'GB__n_estimators': [100, 200, 500, 1000],
@@ -277,7 +283,7 @@ for name, model in pipelines:
         best_model = current_best_model
         best_params = current_best_params
 
-# 6) Avaliação do modelo com o conjunto de testes
+# 7) Avaliação do modelo com o conjunto de testes
 print(best_accuracy)
 print(best_model)
 print(best_params)
@@ -291,32 +297,32 @@ test_accuracy = accuracy_score(y_test, predictions)
 
 print(test_accuracy)
 
-# 7) Preparação do modelo com TODO o dataset
+# 8) Preparação do modelo com TODO o dataset
 best_model.fit(X, y)
 
-# 8) Simulação com novos dados não vistos
+# 9) Simulação com novos dados não vistos
 
-# Novos dados - não sabemos a classe!
+# Novos dados - Removidos do DataSet Original antes do carregamento.
 data = {
-    'Gender': ['Female', 'Male', 'Female', 'Male', 'Female'],
-    'Age': [25.0, 30.0, 22.0, 40.0, 35.0],
-    'Height': [1.65, 1.75, 1.60, 1.80, 1.70],
-    'Weight': [60.0, 85.0, 55.0, 95.0, 68.0],
-    'family_history_with_overweight': ['yes', 'no', 'yes', 'yes', 'no'],
-    'FAVC': ['yes', 'no', 'yes', 'yes', 'no'],
-    'FCVC': [2.0, 3.0, 1.0, 2.0, 3.0],
-    'NCP': [3.0, 2.0, 3.0, 1.0, 3.0],
-    'CAEC': ['Sometimes', 'Always', 'Frequently', 'no', 'Sometimes'],
-    'SMOKE': ['no', 'yes', 'no', 'no', 'yes'],
-    'CH2O': [2.0, 1.0, 3.0, 2.0, 1.0],
-    'SCC': ['no', 'yes', 'no', 'no', 'yes'],
-    'FAF': [1.0, 3.0, 0.0, 2.0, 1.0],
-    'TUE': [1.0, 0.0, 1.0, 2.0, 3.0],
-    'CALC': ['no', 'Sometimes', 'Frequently', 'Always', 'no'],
-    'MTRANS': ['Walking', 'Automobile', 'Public_Transportation', 'Bike', 'Motorbike']
+    'Gender': ['Female', 'Female', 'Female'],
+    'Age': [23.0, 16.0, 24.0],
+    'Height': [1.6, 1.61, 1.6],
+    'Weight': [52.0, 65.0, 100.5],
+    'family_history_with_overweight': ['no', 'yes', 'yes'],
+    'FAVC': ['yes', 'yes', 'yes'],
+    'FCVC': [2.0, 1.0, 3.0],
+    'NCP': [4.0, 1.0, 1.0],
+    'CAEC': ['Frequently', 'Sometimes', 'Sometimes'],
+    'SMOKE': ['no', 'no', 'no'],
+    'CH2O': [2.0, 2.0, 1.0],
+    'SCC': ['no', 'no', 'no'],
+    'FAF': [2.0, 0.0, 0.0],
+    'TUE': [1.0, 0.0, 2.0],
+    'CALC': ['Sometimes', 'no', 'Sometimes'],
+    'MTRANS': ['Automobile', 'Public_Transportation', 'Public_Transportation']
 }
 
-#'NObeyesdad': ['Normal_Weight', 'Overweight_Level_I', 'Insufficient_Weight', 'Obesity_Type_I', 'Normal_Weight']
+#'NObeyesdad': ['Normal_Weight', 'Overweight_Level_I', 'Obesity_Type_II']
 atributos = ['Gender', 'Age', 'Height', 'Weight', 'family_history_with_overweight', 'FAVC', 'FCVC', 'NCP', 'CAEC', 'SMOKE', 'CH2O', 'SCC', 'FAF', 'TUE', 'CALC', 'MTRANS']
 entrada = pd.DataFrame(data, columns=atributos)
 
